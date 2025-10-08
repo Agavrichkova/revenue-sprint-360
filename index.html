@@ -193,6 +193,7 @@
             </div>
             <div class="cta">
               <button type="submit" class="btn">Отправить заявку</button>
+              <a class="btn ghost" href="https://t.me/agavrichkova" target="_blank" rel="noopener">Написать в Telegram</a>
             </div>
             <p class="note">После отправки вы увидите страницу-подтверждение.</p>
           </form>
@@ -207,8 +208,8 @@
             <li>Через 24 часа — старт работы.</li>
           </ol>
           <div class="cta">
-            <a class="btn" href="https://t.me/agavrichkova">Хочу Revenue-Sprint</a>
-            <a class="btn ghost" href="https://t.me/agavrichkova">Задать вопрос</a>
+            <a class="btn" href="https://t.me/agavrichkova" target="_blank" rel="noopener">Хочу Revenue-Sprint</a>
+            <a class="btn ghost" href="https://t.me/agavrichkova" target="_blank" rel="noopener">Задать вопрос</a>
           </div>
           <p class="note">Можно оформить как пилот на одну воронку/сегмент.</p>
         </section>
@@ -217,25 +218,19 @@
   </main>
 
   <script>
-    // === Отправка заявки прямо в Telegram-бота Анны ===
-    const BOT_TOKEN = '8392544562:AAFJ18Spi8NT9h88caduXDuzwip6LSCCCwg';
-    const CHAT_ID   = '262526314'; // личный чат Анны
+    // 🔒 Отправка через Google Apps Script (токен спрятан в свойствах скрипта)
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQ2VmTpC35aekJg30mC_no_1abAOEA6ko4r5onrxNQwoZkM7bMNq3kpouIiJOSEdit/exec';
 
-    function buildText(){
-      const name = document.getElementById('name').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const tg = document.getElementById('telegram').value.trim();
-      const msg = document.getElementById('msg').value.trim();
-      const parts = [
-        '📝 Новая заявка на Revenue Sprint 360°',
-        'Имя: ' + name,
-        'Email: ' + email,
-        'Telegram: ' + tg,
-        'Комментарий: ' + (msg || '—'),
-        '— — —',
-        'Источник: ' + window.location.href
-      ];
-      return parts.join('\\n');
+    let startTs = Date.now();
+
+    function buildPayload(){
+      return {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        telegram: document.getElementById('telegram').value.trim(),
+        message: document.getElementById('msg').value.trim(),
+        page: window.location.href
+      };
     }
 
     document.getElementById('lead-form').addEventListener('submit', async function(e){
@@ -245,22 +240,29 @@
       const trap = this.querySelector('input[name="website"]');
       if (trap && trap.value.trim() !== '') return;
 
-      const text = buildText();
+      // анти-бот: минимум 3 секунды на заполнение
+      if (Date.now() - startTs < 3000) {
+        alert('Похоже на автозаполнение. Попробуйте ещё раз.');
+        return;
+      }
+
       try{
-        const r = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+        // Отправляем как text/plain — избегаем CORS preflight на GitHub Pages
+        const r = await fetch(SCRIPT_URL, {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ chat_id: CHAT_ID, text: text, disable_web_page_preview: true })
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          body: JSON.stringify(buildPayload())
         });
-        if(r.ok){
+
+        if (r.ok) {
           window.location.href = 'success.html';
-        }else{
+        } else {
           const t = await r.text().catch(()=> '');
-          alert('Ошибка при отправке. Проверьте BOT_TOKEN/CHAT_ID. ' + t);
+          alert('Не удалось отправить заявку. ' + t);
         }
       }catch(err){
-        alert('Ошибка соединения.');
         console.error(err);
+        alert('Ошибка соединения.');
       }
     });
   </script>
